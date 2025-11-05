@@ -3,7 +3,6 @@
 import { Button } from "@/components/ui/button";
 import {
   Card,
-  CardAction,
   CardContent,
   CardDescription,
   CardFooter,
@@ -18,35 +17,11 @@ import {
   Field,
   FieldLabel,
   FieldError,
-  FieldDescription,
 } from "@/components/ui/field";
-import * as z from "zod";
-
-const fileSizeLimit = 5 * 1024 * 1024; // 5MB
-const fileSchema = z
-  .file()
-  .refine((file) => ["application/pdf"].includes(file.type), {
-    message: "Invalid document file type",
-  })
-  .refine((file) => file.size <= fileSizeLimit, {
-    message: "File size should not exceed 5MB",
-  });
-
-const linkedInRegex =
-  /^https?:\/\/(?:www\.)?linkedin\.com\/in\/[A-Za-z0-9._%~-]+\/?$/;
-const githubRegex = /^https?:\/\/(?:www\.)?github\.com\/[A-Za-z0-9-]+\/?$/;
-
-const schema = z.object({
-  file: fileSchema,
-  linkedin: z
-    .string()
-    .regex(linkedInRegex, { error: "Must be a valid LinkedIn URL." }),
-  github: z
-    .string()
-    .regex(githubRegex, { error: "Must be a valid GitHub URL." }),
-});
-
-type Schema = z.infer<typeof schema>;
+import { schema, Schema } from "@/schemas/form";
+import { QueryClient, useMutation } from "@tanstack/react-query";
+import { uploadAndProcess } from "@/lib/upload";
+import { Spinner } from "./spinner";
 
 export function QuickStartCard() {
   const form = useForm<Schema>({
@@ -57,8 +32,22 @@ export function QuickStartCard() {
     },
   });
 
+  const { isPending, error, mutate } = useMutation(
+    {
+      mutationFn: uploadAndProcess,
+      onSuccess: () => {},
+    },
+    new QueryClient()
+  );
+
   function onSubmit(data: Schema) {
     // here lets send our data to the api
+    const formData = new FormData();
+    formData.append("file", data.file);
+    formData.append("linkedin", data.linkedin);
+    formData.append("github", data.github);
+
+    mutate(formData);
   }
 
   return (
@@ -144,7 +133,13 @@ export function QuickStartCard() {
       </CardContent>
 
       <CardFooter className="flex-col gap-2">
-        <Button type="submit" className="w-full" form="form">
+        <Button
+          type="submit"
+          className="w-full"
+          form="form"
+          disabled={isPending}
+        >
+          {isPending && <Spinner />}
           Create my CV
         </Button>
       </CardFooter>
