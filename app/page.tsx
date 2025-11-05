@@ -1,5 +1,5 @@
 import Image from "next/image";
-import { QuickStartCard } from "./components/quickstart-card";
+import { QuickStartCard } from "../components/ui/quickstart-card";
 
 export default function Home() {
   return (
